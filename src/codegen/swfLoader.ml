@@ -618,7 +618,7 @@ end
 
 let add_swf_lib com file extern =
 	let swf_lib = new swf_library com file file in
-	com.load_extern_type <- com.load_extern_type @ [swf_lib#build];
+	CompilationServer.handle_native_lib com swf_lib;
 	if not extern then com.native_libs.swf_libs <- (swf_lib :> (swf_lib_type,Swf.swf) native_library) :: com.native_libs.swf_libs
 
 let remove_classes toremove lib l =
