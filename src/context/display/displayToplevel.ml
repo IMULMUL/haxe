@@ -396,20 +396,30 @@ let collect ctx tk with_type =
 			(file,cfile),i
 		) files in
 		let files = List.sort (fun (_,i1) (_,i2) -> -compare i1 i2) files in
+		let check_package pack = match List.rev pack with
+			| [] -> ()
+			| s :: sl -> add_package (List.rev sl,s)
+		in
 		List.iter (fun ((file,cfile),_) ->
 			let module_name = CompilationServer.get_module_name_of_cfile file cfile in
 			let dot_path = s_type_path (cfile.c_package,module_name) in
 			if (List.exists (fun e -> ExtString.String.starts_with dot_path (e ^ ".")) !exclude) then
 				()
 			else begin
-				begin match List.rev cfile.c_package with
-					| [] -> ()
-					| s :: sl -> add_package (List.rev sl,s)
-				end;
+				check_package cfile.c_package;
 				Hashtbl.replace ctx.com.module_to_file (cfile.c_package,module_name) file;
 				process_decls cfile.c_package module_name cfile.c_decls
 			end
-		) files
+		) files;
+		(* let sign = Define.get_signature ctx.com.defines in
+		Hashtbl.iter (fun (file,sign') lib ->
+			if sign = sign' then begin
+				Hashtbl.iter (fun path (_,(pack,decls)) ->
+					check_package pack;
+					process_decls pack (snd path) decls
+				) lib.c_nl_files
+			end
+		) cs.cache.c_native_libs *)
 	end;
 
 	(* packages *)
