@@ -233,6 +233,7 @@ let get_native_lib cs key =
 	with Not_found -> None
 
 let handle_native_lib com lib =
+	let build = lib#build in
 	begin match get() with
 	| Some cs ->
 		let init () =
@@ -266,16 +267,24 @@ let handle_native_lib com lib =
 							()
 					end
 				) lib#list_modules;
+				(* Remove temp lookup, see below. *)
+				com.load_extern_type <- List.filter (fun f -> f != build) com.load_extern_type;
 				(* Save and set up lookup. *)
 				add_native_lib cs key h ftime;
 				setup_lookup h;
 			end;
 		in
+		(* This is some dicey nonsense: Native library handlers might actually
+			lookup something during the conversion to Haxe AST. For instance, the
+			SWF loader has a `is_valid_path` check in some cases which relies on
+			`load_extern_type`. In order to deal with this, we temporarily register
+			the standard resolver and then remove it again after the handling.
+		*)
+		com.load_extern_type <- com.load_extern_type @ [build];
 		com.callbacks#add_before_typer_create init
 	| None ->
 		(* Offline mode, just read library as usual. *)
 		lib#load;
-		let build path p = lib#build path p in
 		com.load_extern_type <- com.load_extern_type @ [build];
 	end
 
