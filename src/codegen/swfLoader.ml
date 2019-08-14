@@ -542,7 +542,6 @@ let remove_debug_infos as3 =
 let parse_swf com file =
 	let t = Timer.timer ["read";"swf"] in
 	let is_swc = file_extension file = "swc" || file_extension file = "ane" in
-	let file = (try Common.find_file com file with Not_found -> failwith ((if is_swc then "SWC" else "SWF") ^ " Library not found : " ^ file)) in
 	let ch = if is_swc then begin
 		let zip = Zip.open_in file in
 		try
@@ -617,7 +616,8 @@ class swf_library com name file_path = object(self)
 end
 
 let add_swf_lib com file extern =
-	let swf_lib = new swf_library com file file in
+	let real_file = (try Common.find_file com file with Not_found -> failwith (" Library not found : " ^ file)) in
+	let swf_lib = new swf_library com file real_file in
 	CompilationServer.handle_native_lib com swf_lib;
 	if not extern then com.native_libs.swf_libs <- (swf_lib :> (swf_lib_type,Swf.swf) native_library) :: com.native_libs.swf_libs
 
