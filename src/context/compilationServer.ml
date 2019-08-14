@@ -27,7 +27,7 @@ type cache = {
 	c_modules : (path * string, module_def) Hashtbl.t;
 	c_directories : (string, cached_directory list) Hashtbl.t;
 	c_removed_files : (string * string,unit) Hashtbl.t;
-	c_native_libs : (string * string,cached_native_lib) Hashtbl.t;
+	c_native_libs : (string,cached_native_lib) Hashtbl.t;
 }
 
 type context_sign = {
@@ -236,9 +236,8 @@ let handle_native_lib com lib =
 	begin match get() with
 	| Some cs ->
 		let init () =
-			let sign = Define.get_signature com.defines in
 			let file = lib#get_file_path in
-			let key = (file,sign) in
+			let key = file in
 			let ftime = file_time file in
 			let setup_lookup lut =
 				let build path p =

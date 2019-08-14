@@ -416,14 +416,12 @@ let collect ctx tk with_type =
 				if process_decls cfile.c_package module_name cfile.c_decls then check_package cfile.c_package;
 			end
 		) files;
-		(* let sign = Define.get_signature ctx.com.defines in
-		Hashtbl.iter (fun (file,sign') lib ->
-			if sign = sign' then begin
-				Hashtbl.iter (fun path (_,(pack,decls)) ->
-					if process_decls pack (snd path) decls then check_package pack;
-				) lib.c_nl_files
-			end
-		) cs.cache.c_native_libs *)
+		List.iter (fun file ->
+			let lib = Hashtbl.find cs.cache.c_native_libs file in
+			Hashtbl.iter (fun path (_,(pack,decls)) ->
+				if process_decls pack (snd path) decls then check_package pack;
+			) lib.c_nl_files
+		) ctx.com.native_libs.all_libs
 	end;
 
 	(* packages *)
