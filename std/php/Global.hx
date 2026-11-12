@@ -10,6 +10,36 @@ import haxe.Constraints;
 @:phpGlobal
 extern class Global {
 	/**
+		@see http://php.net/manual/en/function.get-browser.php
+	**/
+	static function get_browser(?user_agent:String, ?return_array:Bool = false):EitherType<Dynamic, EitherType<NativeArray, Bool>>;
+
+	/**
+		@see http://php.net/manual/en/function.get-defined-constants.php
+	**/
+	static function get_defined_constants(categorize:Bool = false):NativeArray;
+	
+	/**
+		@see http://php.net/manual/en/function.finfo-file.php
+	**/
+	static function finfo_file(finfo:Finfo, filename:String, flags:Int = 0, ?context:Resource):EitherType<String, Bool>;
+	
+	/**
+		@see http://php.net/manual/en/function.finfo-open.php
+	**/
+	static function finfo_open(flags:Int = 0, ?magic_database:String):EitherType<Finfo, Bool>;
+	
+	/**
+		@see http://php.net/manual/en/function.finfo-close.php
+	**/
+	static function finfo_close(finfo:Finfo):Bool;
+	
+	/**
+		@see http://php.net/manual/en/function.fastcgi-finish-request.php
+	**/
+	static function fastcgi_finish_request():Bool;
+	
+	/**
 		@see http://php.net/manual/en/function.exit.php
 	**/
 	static function exit(status:EitherType<String, Int>):Void;
@@ -371,6 +401,11 @@ extern class Global {
 	static function strpos(haystack:String, needle:String, offset:Int = 0):EitherType<Bool, Int>;
 
 	/**
+		@see http://php.net/manual/en/function.stripos.php
+	**/
+	static function stripos(haystack:String, needle:String, offset:Int = 0):EitherType<Bool, Int>;
+
+	/**
 		@see http://php.net/manual/en/function.strrpos.php
 	**/
 	static function strrpos(haystack:String, needle:String, offset:Int = 0):EitherType<Bool, Int>;
@@ -391,6 +426,11 @@ extern class Global {
 	static function strcmp(str1:String, str2:String):Int;
 
 	/**
+		@see https://www.php.net/manual/en/function.strspn.php
+	**/
+	static function strspn(string:String, characters:String, offset:Int = 0, ?length:Int):Int;
+
+	/**
 		@see http://php.net/manual/en/function.strtr.php
 	**/
 	@:overload(function(str:String, from:NativeAssocArray<String>):String {})
@@ -406,6 +446,11 @@ extern class Global {
 	**/
 	static function str_replace(search:EitherType<String, NativeArray>, replace:EitherType<String, NativeArray>, subject:EitherType<String, NativeArray>,
 		?count:Int):EitherType<String, NativeArray>;
+
+	/**
+		@see https://www.php.net/manual/en/function.str-starts-with.php
+	**/
+	static function str_starts_with(haystack:String, needle:String):Bool;
 
 	/**
 		@see http://php.net/manual/en/function.explode.php
@@ -2083,4 +2128,64 @@ extern class Global {
 		@see http://php.net/manual/en/function.ftp-systype.php
 	**/
 	static function ftp_systype(ftp: Resource): EitherType<String, Bool>;
+
+	/**
+		@see http://php.net/manual/en/function.connection-aborted.php
+	**/
+	static function connection_aborted(): Int;
+
+	/**
+		@see http://php.net/manual/en/function.connection-status.php
+	**/
+	static function connection_status(): Int;
+
+	/**
+		@see http://php.net/manual/en/function.ignore-user-abort.php
+	**/
+	static function ignore_user_abort(enable: Null<Bool> = null): Int;
+
+	/**
+		@see http://php.net/manual/en/function.highlight-file.php
+	**/
+	static function highlight_file(filename: String, returns: Bool = false): EitherType<String, Bool>;
+
+	/**
+		@see http://php.net/manual/en/function.highlight-string.php
+	**/
+	static function highlight_string(string: String, returns: Bool = false): EitherType<String, Bool>;
+
+	/**
+		@see http://php.net/manual/en/function.php-strip-whitespace.php
+	**/
+	static function php_strip_whitespace(filename: String): String;
+
+	/**
+		@see http://php.net/manual/en/function.posix-getgid.php
+	**/
+	static function posix_getgid(): Int;
+
+	/**
+		@see http://php.net/manual/en/function.posix-getpid.php
+	**/
+	static function posix_getpid(): Int;
+
+	/**
+		@see http://php.net/manual/en/function.posix-getuid.php
+	**/
+	static function posix_getuid(): Int;
+
+	/**
+		@see http://php.net/manual/en/function.posix-setgid.php
+	**/
+	static function posix_setgid(group_id: Int): Bool;
+
+	/**
+		@see http://php.net/manual/en/function.posix-setuid.php
+	**/
+	static function posix_setuid(user_id: Int): Bool;
+	
+	/**
+		@see https://www.php.net/manual/en/function.date-sun-info.php
+	**/
+	public static function date_sun_info(timestamp:Int, latitude:Float, longitude:Float) :NativeArray;
 }

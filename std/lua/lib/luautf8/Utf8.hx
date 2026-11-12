@@ -9,10 +9,12 @@ package lua.lib.luautf8;
 @:luaRequire('lua-utf8')
 extern class Utf8 {
 	/**
-		Receives a string and returns its length. The empty string `""` has
-		length `0`. Embedded zeros are counted, so `"a\000bc\000"` has length `5`.
+		Returns the number of UTF-8 characters in string s that start between
+		positions i and j (both inclusive). The default for i is 1 and for j is -1.
+		If it finds any invalid byte sequence, returns fail plus the position of
+		the first invalid byte.
 	**/
-	static function len(str:String):Int;
+	static function len(str:String, ?start:Int, ?end:Int, ?lax:Bool):Int;
 
 	/**
 		Receives zero or more integers. Returns a string with length equal to the
@@ -30,12 +32,7 @@ extern class Utf8 {
 		with length `end`, and `sub(str, -end)` returns a suffix of `str` with
 		length `start`.
 	**/
-	static function sub(str:String, start:Int, ?end:Int):StringSub;
-
-	/**
-		Returns the character code at position `index` of `str`.
-	**/
-	static function charCodeAt(str:String, index:Int):Int;
+	static function sub(str:String, start:Int, ?end:Int):String;
 
 	/**
 		Looks for the first match of pattern in the string `str`.
@@ -61,9 +58,9 @@ extern class Utf8 {
 	/**
 
 	**/
-	@:overload(function(str:String, pattern:String, replace:String->Void, ?n:Int):String {})
-	@:overload(function(str:String, pattern:String, replace:String->String, ?n:Int):String {})
-	static function gsub(str:String, pattern:String, replace:String, ?n:Int):String;
+	@:overload(function(str:String, pattern:String, replace:String->Void, ?n:Int):StringGSub {})
+	@:overload(function(str:String, pattern:String, replace:String->String, ?n:Int):StringGSub {})
+	static function gsub(str:String, pattern:String, replace:String, ?n:Int):StringGSub;
 
 	/**
 		Returns an iterator function that, each time it is called, returns the next
@@ -104,8 +101,8 @@ extern class Utf8 {
 	var end:Int;
 }
 
-@:multiReturn extern class StringSub {
-	var match:String;
+@:multiReturn extern class StringGSub {
+	var replaced:String;
 	var count:Int;
 }
 

@@ -24,17 +24,21 @@ package sys.thread;
 
 @:coreApi
 class Lock {
-	var l:Dynamic;
+	final s:Semaphore;
 
 	public function new() {
-		l = untyped __global__.__hxcpp_lock_create();
+		s = new Semaphore(0);
 	}
 
-	public function wait(?timeout:Float = -1):Bool {
-		return untyped __global__.__hxcpp_lock_wait(l, timeout);
+	public function wait(?timeout:Float):Bool {
+		if (timeout == null) {
+			s.acquire();
+			return true;
+		}
+		return s.tryAcquire(timeout);
 	}
 
 	public function release():Void {
-		untyped __global__.__hxcpp_lock_release(l);
+		s.release();
 	}
 }

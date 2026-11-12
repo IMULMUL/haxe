@@ -44,6 +44,8 @@ let parse_path f =
 		| [x] ->
 			check_invalid_char x;
 			[],x
+		| _ :: ("_std" :: l) ->
+			loop l
 		| x :: l ->
 			check_package_name x;
 			let path,name = loop l in
@@ -223,7 +225,7 @@ end = struct
 
 	let create =
 		if Globals.is_windows then
-			(fun f -> String.lowercase (get_full_path f))
+			(fun f -> ExtString.String.lowercase (get_full_path f))
 		else
 			get_full_path
 
@@ -254,6 +256,11 @@ let add_trailing_slash p =
 	else match p.[l-1] with
 		| '\\' | '/' -> p
 		| _ -> p ^ "/"
+
+let comparable_path f =
+	let f = get_full_path (if f = "" then "." else f) in
+	if Globals.is_windows then String.lowercase_ascii (String.map (fun c -> if c = '\\' then '/' else c) f)
+	else f
 
 let rec remove_trailing_slash p =
 	let l = String.length p in
@@ -317,6 +324,8 @@ let module_name_of_file file =
 	| [] ->
 		Globals.die "" __LOC__
 
+let mkdir_mutex = Mutex.create ()
+
 let rec create_file bin ext acc = function
 	| [] -> Globals.die "" __LOC__
 	| d :: [] ->
@@ -327,7 +336,7 @@ let rec create_file bin ext acc = function
 		ch
 	| d :: l ->
 		let dir = String.concat "/" (List.rev (d :: acc)) in
-		if not (Sys.file_exists (remove_trailing_slash dir)) then Unix.mkdir dir 0o755;
+		Mutex.protect mkdir_mutex (fun () -> if not (Sys.file_exists (remove_trailing_slash dir)) then Unix.mkdir dir 0o755);
 		create_file bin ext (d :: acc) l
 
 let rec mkdir_recursive base dir_list =
@@ -375,6 +384,11 @@ let mkdir_from_path path =
 
 let full_dot_path pack mname tname =
 	if tname = mname then (pack,mname) else (pack @ [mname],tname)
+
+let file_extension file =
+	match List.rev (ExtString.String.nsplit file ".") with
+	| e :: _ -> ExtString.String.lowercase e
+	| [] -> ""
 
 module FilePath = struct
 	type t = {

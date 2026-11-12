@@ -12,7 +12,7 @@ enum abstract Value(Int) to Int {
 	}
 }
 
-@:enum abstract ActorStateType(Int) from Int to Int {
+enum abstract ActorStateType(Int) from Int to Int {
     var GoingLeft = 0;
     var GoingRight = 1;
 }
@@ -26,7 +26,7 @@ class Issue10188 {
 		issues_Issue10188.use(_g);
 	')
 	static function testKevin() {
-		use([for(v in [V1]) if(has(v)) v.toString()]);
+		use([inline for(v in [V1]) if(has(v)) v.toString()]);
 	}
 
 

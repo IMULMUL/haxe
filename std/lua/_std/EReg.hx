@@ -20,6 +20,30 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#if lua_vanilla
+
+// Vanilla Lua mode - EReg requires lrexlib-pcre2 which is not available
+@:coreApi
+class EReg {
+	static inline function notImplemented():Dynamic
+		throw new haxe.exceptions.NotImplementedException("EReg cannot be used with -D lua-vanilla because it requires lrexlib-pcre2");
+
+	public function new(r:String, opt:String):Void notImplemented();
+	public function match(s:String):Bool return notImplemented();
+	public function matched(n:Int):String return notImplemented();
+	public function matchedLeft():String return notImplemented();
+	public function matchedRight():String return notImplemented();
+	public function matchedPos():{pos:Int, len:Int} return notImplemented();
+	public function matchedNum():Int return notImplemented();
+	public function matchSub(s:String, pos:Int, len:Int = -1):Bool return notImplemented();
+	public function split(s:String):Array<String> return notImplemented();
+	public function replace(s:String, by:String):String return notImplemented();
+	public function map(s:String, f:EReg->String):String return notImplemented();
+	public static function escape(s:String):String return notImplemented();
+}
+
+#else
+
 import lua.Table;
 import lua.Lib;
 import lua.lib.lrexlib.Rex;
@@ -52,7 +76,7 @@ class EReg {
 			}
 		}
 
-		ropt |= FLAGS.UTF8; // always check validity of utf8 string
+		ropt |= FLAGS.UTF; // always check validity of utf8 string
 		ropt |= FLAGS.UCP; // always enable utf8 character properties
 
 		if (global == null)
@@ -76,13 +100,13 @@ class EReg {
 		if (m[1] == null || n < 0)
 			throw "EReg::matched";
 		else if (n == 0) {
-			var k = sub(s, m[1], m[2]).match;
+			var k = sub(s, m[1], m[2]);
 			return k;
 		} else if (Std.isOfType(m[3], lua.Table)) {
 			var mn = 2 * (n - 1);
 			if (Std.isOfType(untyped m[3][mn + 1], Bool))
 				return null;
-			return sub(s, untyped m[3][mn + 1], untyped m[3][mn + 2]).match;
+			return sub(s, untyped m[3][mn + 1], untyped m[3][mn + 2]);
 		} else {
 			throw "EReg:matched";
 		}
@@ -91,13 +115,13 @@ class EReg {
 	public function matchedLeft():String {
 		if (m[1] == null)
 			throw "No string matched";
-		return sub(s, 1, m[1] - 1).match;
+		return sub(s, 1, m[1] - 1);
 	}
 
 	public function matchedRight():String {
 		if (m[1] == null)
 			throw "No string matched";
-		return sub(s, m[2] + 1).match;
+		return sub(s, m[2] + 1);
 	}
 
 	public function matchedPos():{pos:Int, len:Int} {
@@ -109,6 +133,14 @@ class EReg {
 			pos: left.length,
 			len: matched.length
 		}
+	}
+
+	public function matchedNum():Int {
+		if (m == null) return 0;
+		else if (m[1] == null)
+			return 0;
+		else
+			return 1 + untyped __lua_length__(m[3]) / 2;
 	}
 
 	public function matchSub(s:String, pos:Int, len:Int = -1):Bool {
@@ -143,9 +175,9 @@ class EReg {
 
 	public function replace(s:String, by:String):String {
 		var chunks = by.split("$$");
-		chunks = [for (chunk in chunks) Rex.gsub(chunk, "\\$(\\d)", "%%%1", 1)];
+		chunks = [for (chunk in chunks) Rex.gsub(chunk, "\\$(\\d)", "%%%1", 1).replaced];
 		by = chunks.join("$");
-		return Rex.gsub(s, r, by, global ? null : 1);
+		return Rex.gsub(s, r, by, global ? null : 1).replaced;
 	}
 
 	public function map(s:String, f:EReg->String):String {
@@ -155,23 +187,23 @@ class EReg {
 			if (bytesOffset > len(s)) {
 				break;
 			} else if (!matchFromByte(s, bytesOffset)) {
-				buf.add(sub(s, bytesOffset).match);
+				buf.add(sub(s, bytesOffset));
 				break;
 			}
 			var pos = m[1];
 			var length = m[2] - m[1];
-			buf.add(sub(s, bytesOffset, pos - 1).match);
+			buf.add(sub(s, bytesOffset, pos - 1));
 			buf.add(f(this));
 			if (length < 0) {
-				var charBytes = len(sub(s, pos).match.charAt(0));
-				buf.add(sub(s, pos, pos + charBytes - 1).match);
+				var charBytes = len(sub(s, pos).charAt(0));
+				buf.add(sub(s, pos, pos + charBytes - 1));
 				bytesOffset = pos + charBytes;
 			} else {
 				bytesOffset = m[2] + 1;
 			}
 		} while (global);
 		if (!global && bytesOffset > 1 && bytesOffset - 1 < len(s))
-			buf.add(sub(s, bytesOffset).match);
+			buf.add(sub(s, bytesOffset));
 		return buf.toString();
 	}
 
@@ -208,7 +240,9 @@ class EReg {
 
 	static function __init__():Void {
 		if (Rex == null) {
-			throw "Rex is missing.  Please install lrexlib-pcre.";
+			throw "Rex is missing.  Please install lrexlib-pcre2.";
 		}
 	}
 }
+
+#end

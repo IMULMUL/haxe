@@ -19,7 +19,6 @@
 
 open Globals
 open Ast
-open Type
 open EvalValue
 open EvalContext
 open EvalEncode
@@ -124,10 +123,13 @@ let fcmp (a:float) b = if a = b then CEq else if a < b then CInf else if a > b t
 
 let icmp (a:int32) b = let l = Int32.compare a b in if l = 0 then CEq else if l < 0 then CInf else CSup
 
+let i64cmp (a:int64) b = let l = Int64.compare a b in if l = 0 then CEq else if l < 0 then CInf else CSup
+
 let rec compare a b =
 	match a, b with
 	| VNull,VNull -> CEq
 	| VInt32 a,VInt32 b -> icmp a b
+	| VInt64 a,VInt64 b -> i64cmp a b
 	| VFloat a,VFloat b -> fcmp a b
 	| VFloat a,VInt32 b -> fcmp a (Int32.to_float b)
 	| VInt32 a,VFloat b -> fcmp (Int32.to_float a) b
@@ -156,9 +158,9 @@ let rec compare a b =
 		if f1 != f2 then CUndef
 		else compare v1 v2
 	| VLazy f1,_ ->
-		compare (!f1()) b
+		compare (AtomicLazy.force f1) b
 	| _,VLazy f2 ->
-		compare a (!f2())
+		compare a (AtomicLazy.force f2)
 	| _ -> CUndef
 
 let rec arrays_equal cmp a1 a2 =
@@ -176,6 +178,7 @@ let rec arrays_equal cmp a1 a2 =
 and equals_structurally a b =
 	match a,b with
 	| VInt32 a,VInt32 b -> Int32.compare a b = 0
+	| VInt64 a,VInt64 b -> Int64.compare a b = 0
 	| VFloat a,VFloat b -> a = b
 	| VFloat a,VInt32 b -> a = (Int32.to_float b)
 	| VInt32 a,VFloat b -> (Int32.to_float a) = b
@@ -185,8 +188,8 @@ and equals_structurally a b =
 	| VObject a,VObject b -> a == b || arrays_equal equals_structurally a.ofields b.ofields
 	| VEnumValue a,VEnumValue b -> a == b || a.eindex = b.eindex && arrays_equal equals_structurally a.eargs b.eargs && a.epath = b.epath
 	| VPrototype proto1,VPrototype proto2 -> proto1.ppath = proto2.ppath
-	| VLazy f1,_ -> equals_structurally (!f1()) b
-	| _,VLazy f2 -> equals_structurally a (!f2())
+	| VLazy f1,_ -> equals_structurally (AtomicLazy.force f1) b
+	| _,VLazy f2 -> equals_structurally a (AtomicLazy.force f2)
 	| _ -> a == b
 
 let is_true v = match v with
@@ -195,6 +198,11 @@ let is_true v = match v with
 
 let op_add p v1 v2 = match v1,v2 with
 	| VInt32 i1,VInt32 i2 -> vint32 (Int32.add i1 i2)
+	| VInt64 i1,VInt64 i2 -> vint64 (Int64.add i1 i2)
+	(* These two cases should technically not exist, but the analyzer emits code like this because
+	   our TConst only knows Int32 at the moment. *)
+	| VInt64 i1,VInt32 i2 -> vint64 (Int64.add i1 (Int64.of_int32 i2))
+	| VInt32 i1,VInt64 i2 -> vint64 (Int64.add (Int64.of_int32 i1) i2)
 	| VFloat f1,VFloat f2 -> vfloat (f1 +. f2)
 	| VInt32 i,VFloat f | VFloat f,VInt32 i -> vfloat ((Int32.to_float i) +. f)
 	| VNativeString s1,VNativeString s2 -> vnative_string (s1 ^ s2)
@@ -205,6 +213,7 @@ let op_add p v1 v2 = match v1,v2 with
 
 let op_mult p v1 v2 = match v1,v2 with
 	| VInt32 i1,VInt32 i2 -> vint32 (Int32.mul i1 i2)
+	| VInt64 i1,VInt64 i2 -> vint64 (Int64.mul i1 i2)
 	| VFloat f1,VFloat f2 -> vfloat (f1 *. f2)
 	| VInt32 i,VFloat f | VFloat f,VInt32 i -> vfloat ((Int32.to_float i) *. f)
 	| _ -> invalid_binop OpMult v1 v2 p
@@ -218,6 +227,10 @@ let op_div p v1 v2 = match v1,v2 with
 
 let op_sub p v1 v2 = match v1,v2 with
 	| VInt32 i1,VInt32 i2 -> vint32 (Int32.sub i1 i2)
+	| VInt64 i1,VInt64 i2 -> vint64 (Int64.sub i1 i2)
+	(* See op_add remark. *)
+	| VInt64 i1,VInt32 i2 -> vint64 (Int64.sub i1 (Int64.of_int32 i2))
+	| VInt32 i1,VInt64 i2 -> vint64 (Int64.sub (Int64.of_int32 i1) i2)
 	| VFloat f1,VFloat f2 -> vfloat (f1 -. f2)
 	| VInt32 i1,VFloat f2 -> vfloat ((Int32.to_float i1) -. f2)
 	| VFloat f1,VInt32 i2 -> vfloat (f1 -. (Int32.to_float i2))
@@ -248,15 +261,24 @@ let op_xor p v1 v2 = match v1,v2 with
 	| _ -> invalid_binop OpXor v1 v2 p
 
 let op_shl p v1 v2 = match v1,v2 with
-	| VInt32 i1,VInt32 i2 -> vint32 (Int32.shift_left i1 (Int32.to_int i2))
+	| VInt32 i1,VInt32 i2 ->
+		let i2 = Int32.logand i2 i32_31 in
+		let i2 = Int32.to_int i2 in
+		vint32 (Int32.shift_left i1 i2)
 	| _ -> invalid_binop OpShl v1 v2 p
 
 let op_shr p v1 v2 = match v1,v2 with
-	| VInt32 i1,VInt32 i2 -> vint32 (Int32.shift_right i1 (Int32.to_int i2))
+	| VInt32 i1,VInt32 i2 ->
+		let i2 = Int32.logand i2 i32_31 in
+		let i2 = Int32.to_int i2 in
+		vint32 (Int32.shift_right i1 i2)
 	| _ -> invalid_binop OpShr v1 v2 p
 
 let op_ushr p v1 v2 = match v1,v2 with
-	| VInt32 i1,VInt32 i2 -> vint32 (Int32.shift_right_logical i1 (Int32.to_int i2))
+	| VInt32 i1,VInt32 i2 ->
+		let i2 = Int32.logand i2 i32_31 in
+		let i2 = Int32.to_int i2 in
+		vint32 (Int32.shift_right_logical i1 i2)
 	| _ -> invalid_binop OpUShr v1 v2 p
 
 let op_mod p v1 v2 = match v1,v2 with
@@ -284,7 +306,7 @@ let get_binop_fun op p = match op with
 	| OpShr -> op_shr p
 	| OpUShr -> op_ushr p
 	| OpMod -> op_mod p
-	| OpAssign | OpBoolAnd | OpBoolOr | OpAssignOp _ | OpInterval | OpArrow | OpIn -> die ~p "" __LOC__
+	| OpAssign | OpBoolAnd | OpBoolOr | OpAssignOp _ | OpInterval | OpArrow | OpIn | OpNullCoal -> die ~p "" __LOC__
 
 let prepare_callback v n =
 	match v with

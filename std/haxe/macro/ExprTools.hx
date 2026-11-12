@@ -144,7 +144,7 @@ class ExprTools {
 				case EConst(_): e.expr;
 				case EArray(e1, e2): EArray(f(e1), f(e2));
 				case EBinop(op, e1, e2): EBinop(op, f(e1), f(e2));
-				case EField(e, field): EField(f(e), field);
+				case EField(e, field, kind): EField(f(e), field, kind);
 				case EParenthesis(e): EParenthesis(f(e));
 				case EObjectDecl(fields):
 					var ret = [];
@@ -161,6 +161,8 @@ class ExprTools {
 						var v2:Var = {name: v.name, type: v.type, expr: opt(v.expr, f)};
 						if (v.isFinal != null)
 							v2.isFinal = v.isFinal;
+						if (v.isStatic != null)
+							v2.isStatic = v.isStatic;
 						ret.push(v2);
 					}
 					EVars(ret);

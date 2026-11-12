@@ -24,7 +24,7 @@ package lua.lib.lrexlib;
 
 import haxe.extern.EitherType;
 
-@:luaRequire("rex_pcre")
+@:luaRequire("rex_pcre2")
 extern class Rex {
 	inline static function create(expr:String, flag:EitherType<Int, String>):Rex {
 		return untyped Rex['new'](expr, flag);
@@ -82,5 +82,12 @@ extern class Rex {
 		  This function searches for all matches of the pattern `patt` in the string
 		`subj` and replaces them according to the parameters `repl` and `n`.
 	**/
-	static function gsub(subj:String, patt:EitherType<Rex, String>, repl:Dynamic, ?n:Int, ?cf:Int, ?ef:Int):String;
+	static function gsub(subj:String, patt:EitherType<Rex, String>, repl:Dynamic, ?n:Int, ?cf:Int, ?ef:Int):RexGSubResult;
+}
+
+@:multiReturn
+extern class RexGSubResult {
+	var replaced:String;
+	var matches:Int;
+	var substitutions:Int;
 }
